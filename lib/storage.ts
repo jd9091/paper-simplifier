@@ -65,12 +65,25 @@ async function savePaperBlob(paper: ProcessedPaper): Promise<string> {
 
 async function getPaperBlob(id: string): Promise<ProcessedPaper | null> {
   try {
+    // First, list to find the blob URL (head() requires the full URL)
     const { blobs } = await list({ prefix: `papers/${id}.json` });
-    if (blobs.length === 0) return null;
-    
-    const response = await fetch(blobs[0].url);
-    if (!response.ok) return null;
-    
+
+    if (blobs.length === 0) {
+      console.log(`No blob found for paper ID: ${id}`);
+      return null;
+    }
+
+    console.log(`Found blob for ${id}:`, blobs[0].url);
+
+    const response = await fetch(blobs[0].url, {
+      cache: 'no-store', // Ensure fresh data
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to fetch blob: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
     return await response.json();
   } catch (error) {
     console.error('Error fetching paper from blob:', error);
