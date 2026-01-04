@@ -3,7 +3,7 @@ import { processPaper } from '@/lib/claude-client';
 import { savePaper } from '@/lib/storage';
 import { UserLevel, PaperMetadata } from '@/lib/types';
 
-export const maxDuration = 60; // 60 seconds timeout for Vercel
+export const maxDuration = 300; // 5 minutes timeout (requires Vercel Pro for >60s)
 
 export async function POST(request: NextRequest) {
   try {

@@ -40,7 +40,17 @@ export default function Home() {
         body: formData,
       });
 
-      const uploadData = await uploadResponse.json();
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+
+      let uploadData;
+      try {
+        uploadData = await uploadResponse.json();
+      } catch {
+        throw new Error('Server returned an invalid response. Please try again.');
+      }
 
       if (!uploadData.success) {
         throw new Error(uploadData.error || 'Failed to upload file');
@@ -58,7 +68,17 @@ export default function Home() {
         }),
       });
 
-      const processData = await processResponse.json();
+      if (!processResponse.ok) {
+        const errorText = await processResponse.text();
+        throw new Error(`Processing failed: ${errorText}`);
+      }
+
+      let processData;
+      try {
+        processData = await processResponse.json();
+      } catch {
+        throw new Error('Server returned an invalid response during processing. Please try again.');
+      }
 
       if (!processData.success) {
         throw new Error(processData.error || 'Failed to process paper');
@@ -83,7 +103,17 @@ export default function Home() {
         body: JSON.stringify({ url }),
       });
 
-      const fetchData = await fetchResponse.json();
+      if (!fetchResponse.ok) {
+        const errorText = await fetchResponse.text();
+        throw new Error(`Fetch failed: ${errorText}`);
+      }
+
+      let fetchData;
+      try {
+        fetchData = await fetchResponse.json();
+      } catch {
+        throw new Error('Server returned an invalid response while fetching URL.');
+      }
 
       if (!fetchData.success) {
         throw new Error(fetchData.error || 'Failed to fetch URL');
@@ -101,7 +131,17 @@ export default function Home() {
         }),
       });
 
-      const processData = await processResponse.json();
+      if (!processResponse.ok) {
+        const errorText = await processResponse.text();
+        throw new Error(`Processing failed: ${errorText}`);
+      }
+
+      let processData;
+      try {
+        processData = await processResponse.json();
+      } catch {
+        throw new Error('Server returned an invalid response during processing.');
+      }
 
       if (!processData.success) {
         throw new Error(processData.error || 'Failed to process paper');
@@ -119,111 +159,111 @@ export default function Home() {
       <ProcessingProgress show={isProcessing} />
 
       <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-      {/* Level Selector */}
-      <LevelSelector selectedLevel={selectedLevel} onLevelChange={setSelectedLevel} />
+        {/* Level Selector */}
+        <LevelSelector selectedLevel={selectedLevel} onLevelChange={setSelectedLevel} />
 
-      {/* Input Methods */}
-      <div className="section-container">
-        <div style={{
-          display: 'flex',
-          borderBottom: '1px solid var(--color-border)',
-          marginBottom: '1.5rem'
-        }}>
-          <button
-            onClick={() => setInputMode('upload')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              borderBottom: inputMode === 'upload' ? '2px solid var(--color-fg)' : '2px solid transparent',
-              color: inputMode === 'upload' ? 'var(--color-fg)' : 'var(--color-fg-muted)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            Upload PDF
-          </button>
-          <button
-            onClick={() => setInputMode('url')}
-            style={{
-              padding: '0.75rem 1.25rem',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              borderBottom: inputMode === 'url' ? '2px solid var(--color-fg)' : '2px solid transparent',
-              color: inputMode === 'url' ? 'var(--color-fg)' : 'var(--color-fg-muted)',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            Paste URL
-          </button>
-        </div>
-
-        {inputMode === 'upload' ? (
-          <div>
-            <UploadForm onFileSelect={handleFileSelect} />
-            {selectedFile && (
-              <button
-                onClick={handleUploadSubmit}
-                className="btn-primary"
-                style={{ width: '100%', marginTop: '1rem' }}
-              >
-                Process Paper
-              </button>
-            )}
-          </div>
-        ) : (
-          <URLInput onURLSubmit={handleURLSubmit} />
-        )}
-
-        {error && (
+        {/* Input Methods */}
+        <div className="section-container">
           <div style={{
-            marginTop: '1rem',
-            padding: '1rem',
-            border: '1px solid var(--color-fg)',
-            borderRadius: '0.375rem',
-            background: 'var(--color-hover)'
+            display: 'flex',
+            borderBottom: '1px solid var(--color-border)',
+            marginBottom: '1.5rem'
           }}>
-            <div style={{ fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.875rem' }}>Error</div>
-            <div style={{ fontSize: '0.8125rem', color: 'var(--color-fg-muted)' }}>{error}</div>
+            <button
+              onClick={() => setInputMode('upload')}
+              style={{
+                padding: '0.75rem 1.25rem',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                borderBottom: inputMode === 'upload' ? '2px solid var(--color-fg)' : '2px solid transparent',
+                color: inputMode === 'upload' ? 'var(--color-fg)' : 'var(--color-fg-muted)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Upload PDF
+            </button>
+            <button
+              onClick={() => setInputMode('url')}
+              style={{
+                padding: '0.75rem 1.25rem',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                borderBottom: inputMode === 'url' ? '2px solid var(--color-fg)' : '2px solid transparent',
+                color: inputMode === 'url' ? 'var(--color-fg)' : 'var(--color-fg-muted)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              Paste URL
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* Features Info */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '1rem',
-        marginTop: '2rem'
-      }}>
-        <div style={{ textAlign: 'center', padding: '1rem' }}>
-          <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📊</div>
-          <div style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Auto Diagrams</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-fg-muted)' }}>
-            Visual flowcharts for methodology & results
-          </div>
+          {inputMode === 'upload' ? (
+            <div>
+              <UploadForm onFileSelect={handleFileSelect} />
+              {selectedFile && (
+                <button
+                  onClick={handleUploadSubmit}
+                  className="btn-primary"
+                  style={{ width: '100%', marginTop: '1rem' }}
+                >
+                  Process Paper
+                </button>
+              )}
+            </div>
+          ) : (
+            <URLInput onURLSubmit={handleURLSubmit} />
+          )}
+
+          {error && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '1rem',
+              border: '1px solid var(--color-fg)',
+              borderRadius: '0.375rem',
+              background: 'var(--color-hover)'
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.875rem' }}>Error</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--color-fg-muted)' }}>{error}</div>
+            </div>
+          )}
         </div>
-        <div style={{ textAlign: 'center', padding: '1rem' }}>
-          <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🎯</div>
-          <div style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Adaptive Level</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-fg-muted)' }}>
-            Content tailored to your background
+
+        {/* Features Info */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '1rem',
+          marginTop: '2rem'
+        }}>
+          <div style={{ textAlign: 'center', padding: '1rem' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>📊</div>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Auto Diagrams</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-fg-muted)' }}>
+              Visual flowcharts for methodology & results
+            </div>
           </div>
-        </div>
-        <div style={{ textAlign: 'center', padding: '1rem' }}>
-          <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔗</div>
-          <div style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Shareable</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-fg-muted)' }}>
-            Generate links to share with others
+          <div style={{ textAlign: 'center', padding: '1rem' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🎯</div>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Adaptive Level</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-fg-muted)' }}>
+              Content tailored to your background
+            </div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '1rem' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🔗</div>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Shareable</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-fg-muted)' }}>
+              Generate links to share with others
+            </div>
           </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
