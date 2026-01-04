@@ -1,0 +1,575 @@
+Towards AI/ML-Driven Network Traffic Engineering
+Quazi Mishkatul Alam Vinay Kolar Marina Thottan
+Amazon Web Services Amazon Web Services Amazon Web Services
+Seattle, WA, USA San Jose, CA, USA New York, NY, United States
+qalam@amazon.com vinkolar@amazon.com mthottan@amazon.com
+Abstract and a large system of protocols to connect users to their requested
+Internetisoneofthelargestscaledistributedsystemmadeupof applications, usually hosted in large data-centers or servers.
+multiple networks that is used to digitally connect billions of users. ArtificialIntelligenceandMachineLearning(AI/ML)provides
+Traffic Engineering (TE) is a core problem in networking, which is promising tools to optimize networks. Each network measures
+responsibleforroutingpacketsacrossnetworkstoprovidethebest performance metrics such as utilization, memory, congestion, loss
+userexperiencewhileensuringasecure,stable,well-utilizedand andlatency,acrosseachnetworknodeandlink.Inaddition,logs
+cost-efficientnetwork.Thetime-varyinggraphnatureofthenet- at various nodes provide valuable information about the state of
+workalongwithunexpectedtopologyandtrafficchangesmakesTE each node. The TE system therefore has to learn across different
+inlargeoperationalnetworkschallenging.Thispaperfirstprovides data modalities in this network graph. There are dynamic topolog-
+aholisticsketchofdifferentviewpointstakenbyresearchersand ical(graph)learningaspects,suchasvariousnodesconnectedto
+practitioners to formulate and solve the TE problem. We first cover each other. There are time-series and distribution effects of net-
+the systemsview ,whereresearcheshavedefinedtheproblemand workingperformancemetricsbetweennodes,andcongestionon
+usedcreativeheuristicprotocolstomanagelargenetworks.Wethen these nodes, that determine the connectivity experience. Finally,
+focusonthetheoreticalformulationsfrom optimizationandcontrol log data is another important source to analyze what is happening
+theory to provide optimal and stable networks. These formulations across the network nodes. AI/ML provides a promising methodol-
+provide clear definitions and provable properties for designing TE. ogytodecipherpatternsacrosssystemsanddata-modalities,and
+We devise a taxonomy of existing studies on how such theoretical autonomously alert or even autonomously fix the network.
+problemsarebeingsolvedtoday.Finally,wepresentthe AI/MLand CertainareasofnetworkinghaveusedAI/MLtolearnandact,
+heuristic perspective for near-optimal TE. Owing to the dynamism while thereis a wideopen opportunity forits application inother
+andlargescaleofthenetworks,especiallyplanet-scalecloudnet- areas [ 2 , 4 , 53 ]. A majority of AI/ML applications use anomaly
+works,thesetheoreticalmethodsneedreal-timedataandgreedy detection, fault localization and root-causing algorithms for net-
+approximations to solve TE. Recent progress in AI/ML provides working or security metrics, often using time-series and graph
+encouraging tools here, where time-series and graph based AI/ML modalities [ 33 , 42 , 67 ]. However, the success of having standard
+modelscanbeusedtodetect/predictthenetworkstate,andcontrol models or neural network architectures, deriving insights and tak-
+algorithms such as Reinforcement Learning (RL) be powerful tools ing automated actions using AI/ML is arguably underwhelming
+tosolveTE.Wesurveytheseapproachesandproposepromising inthenetworkingdomainwhencomparedtootherlargesystems
+directions towards AI/ML in network control and TE. suchasvisionorlanguagebasedsystems.Themainreasonscanbe
+attributedto:(a)dynamismoftrafficandtopologychangesonlarge
+ACM Reference Format:
+QuaziMishkatulAlam, Vinay Kolar,andMarina Thottan.2024.Towards networks, which creates unexpected and noisy data to learn from;
+AI/ML-Driven Network Traffic Engineering. In 4th International Conference (b)localchangesthatleadtoglobaleffectsacrossotherpartsofthe
+onAI-MLSystems(AIMLSystems2024),October08–11,2024,BatonRouge,LA, network,thusmakingithardtopinpointwithoutjointlyanalyzing
+USA. ACM,NewYork,NY,USA,8pages.https://doi.org/10.1145/3703412. networkgraph,time-seriesofmetricsandlogs;and(c)issuesabout
+3703436 dataavailabilityandreadinessbecauseofnon-standardizeddatabe-
+ingownedbymultiplenetworkoperators[ 10 ].Hence,itiscommon
+to see individual use cases of AI/ML that uses local observation
+1 Introduction (e.g.,monitoringnetworklinkbetweennodes,congestiononthe
+Computer networking is one of the largest distributed systems device)foralertingormakinglocaldecisions,butnotacoordinated
+today that provide the backbone for digital connectivity. Operat- holistic solution – like routing across a large operational network.
+ingalmostinvisibly,networkingenableseverythingfromsimple Traffic Engineering is one of the primary areas where such mea-
+webbrowsingtoInternetofThings(IoT).Itemploysdiversetech- surements and coordination across the network is vital. Traffic
+nologiessuchasopticalfibers,copper,cellular,satellitenetworks, Engineering(TE)isresponsibleforroutingpacketsacrossanop-
+erationalnetwork suchthatusersgetthe bestexperienceandthe
+networkisstable,secure,well-utilizedandcost-efficient.TEisespe-
+ciallyessentialforplanet-scaleoperationalnetworkstoensurethat
+This traffic demands are constantly well-placed while reacting to net-
+4.0 License. work is licensed under a Creative Commons Attribution International
+work degradation, topology changes or unexpected traffic demand
+AIMLSystems 2024, October 08–11, 2024, Baton Rouge, LA, USA surges. Researchers and practitioners are solving TE using various
+© ACM 2024 ISBN Copyright
+https://doi.org/10.1145/3703412.3703436 979-8-4007-1161-9/24/10 held by the owner/author(s). approaches, ranging from development of creative protocols using
+system heuristics to formulating a control theoretical or AI/ML
+
+AIMLSystems 2024, October 08–11, 2024, Baton Rouge, LA, USA Alam et al.
+models to provide near-optimal TE. This paper surveys the general storesthelink-state,anduseashortestpathalgorithm,likeDijk-
+problem of network control and TE from three viewpoints. stra’s algorithm, to route the packet.
+1. We summarize the systems view on how the current protocols Adisadvantageofthisapproachisthatthetrafficisconcentrated
+areregulatingthenetworkbasedondifferentdistributedandquasi- only on shortest paths. Any peaks in traffic will induce congestion
+centralizednetworkarchitectures.However,thesesystemprotocols on hot-spot links and nodes, resulting in network degradation –
+donotclearlydefinetheoptimizationproblemthattheyaresolving evenwhenotherpartsofthenetworkhavecapacity.Suchhotspots
+and are not guaranteed to provide best or stable routing. degrade network availability, and will require over-provisioning.
+2.Wereviewstudieswhichfocuson optimalityandcontrolmech- But, this is not scalable since high capacity needs to be added only
+anisms . Here, optimization theory is used to formulate how the at few hot spots in the network.
+network should behave. Some studies extend this by using control DistributedTrafficSpreading: Thenext-generationofTEused
+theory to design feedback mechanisms that provide optimal and traffic spreading protocols such as Multi-Protocol Label Switching
+stablenetworkconfigurations.Centralizednetworkarchitectures with TE (MPLS TE) [ 9 ]. Often, large networks use MPLS TE based
+provide means of running a global optimization problem. However, mechanismstooptimizethetrafficacrossthebackbonetoensure
+it is computationally infeasible to run in large networks such as availability and best performance [ 47 , 49 ]. These protocols enable
+planet-scale cloud backbone. aningressroutertospreadthetrafficovermultiplepathsacrossthe
+3.Finally,wediscusshow AI/ML providestoolstosolvetheTEprob- network, thus making the network more: (a) scalable by spreading
+lem to provide near-optimal control mechanisms. AI algorithms the traffic across multiple areas of the network; and (b) available
+for modeling time-varying network graphs and control algorithms, by routing via backup paths when the primary path breaks down.
+such as Reinforcement Learning (RL), can be used for learning the MPLSTEenabledroutersspreadtrafficonvariouspaths,with
+state of the network and routing flows near-optimally in a large someadditionalcontrollogicforcoordinatingannouncementand
+network. pathchangesonanetwork.Largenetworkstypicallydesignrouting
+Wefirstreviewthesystemsviewandthenprovidemotivation such that traffic can be sent via the best paths (e.g., low latency),
+forAI/MLinSection2.WeprovideageneralizedoptimalTEmodel suchthatthenetworkiswellutilizedandthereisnosinglepointof
+and review optimality and control theory work in Section 3. We failure. There are several additional mechanisms for fast reroute to
+then present a taxonomy of studies that propose and solve optimal handlenetworkfailuresinfewmillisecondsbyadjustingtheactive
+TE in Section 4. Finally, we discuss AI/ML based approaches in paths in the network [7].
+solving optimal TE in Section 5, and conclude in Section 6. Return of centralized controllers: Recently, centralized con-
+trollers have become popular in large networks, since this enables
+a controller to take optimal routing decisions based on a global
+2 TE Systems and AI/ML Motivation network view. Software Defined Networking (SDNs) is one such
+We discuss the background about network routing and TE, and architecture[ 25 , 39 , 57 ].SDNsenabledacompletelyprogrammable
+then present the opportunity and challenges for using AI/ML. network which decoupled two main functionalities:
+1. Control plane: This defines the control decisions taken on how
+toroute (e.g.,computingroutes betweeneachpair ofnodes).This
+2.1 Routing and Traffic Engineering finalsetofpoliciesandpathsisthendisseminatedtoalltherouters.
+Large operational networks today are planet-scale. For example, 2. Data plane: Each router then takes a decision on a per-packet
+AWS network spans across 34 regions, 108 Availability Zones and basis on how to forward packets based on the policies received
+600+ points of presence [ 6 ]. Network operators manage these net- from the control plane.
+workstocatertovaryingtrafficdemandsbydesigninggoodnet- ThisseparationofdutiesenabledhavingcentralizedSDNcon-
+work architectures, and provisioning capacity at devices and links. trollers which have a global view rather than distributed protocols
+An important function of this network involves measuring perfor- such as MPLS. The idea of a centralized controller and its responsi-
+mance, and controlling traffic routing that satisfy various demands bility to find the best routes across the network is attractive, since
+across the network such that users get the best experience and this enables a single point where AI/ML can be used to understand
+networkroutingisefficientandstable;thisisTrafficEngineering data and take actions. There are variations of SDNs in large cloud
+(TE) [ 8 , 44 ]. There are different approaches and architectures for networks,whichusemultiplecontrollerssothatthenetworkcan
+routing and TE, which we categorize and describe below. be scaled. However, each controller still has a fairly large view –
+DistributedShortestPathRouting: Astraight-forwardapproach ratherthanarouter-levelview–tocomputebestperformingpaths.
+is to route packets within a single owner network (called Au-
+tonomous System or AS) using variations of shortest-path routing
+protocols.Theseprotocolscanbeproprietary,butusually,networks 2.2 Opportunity and challenges for using AI/ML
+employwellknownIntra-ASprotocolssuchasInteriorGateway The data and network complexity make AI/ML promising tools
+Protocols(IGP).ManyIGPprotocols,suchasOpenShortestPath to solve TE. Data has to be analyzed across different modalities,
+First (OSPF), make local routing decisions on a per-packet basis and then the entire network has to take action (control element)
+usingdistributedalgorithms.Networkrouters(nodesinagraph) so that the network performs as intended. The data modalities
+advertisetheirconnectivity(links)toallothernodesbyflooding usually consist of graphs, time-series and logs that need to be
+link-state advertisements that propagate the edge weight for the collectivelyanalyzedacrossthenetworkbecauselocaleffectscan
+linkbasedonvariousperformanceandcapacitymetrics.Eachnode leadtoglobalchanges.Forexample,changestothetopologygraph
+
+Towards AI/ML-Driven Network Traffic Engineering AIMLSystems 2024, October 08–11, 2024, Baton Rouge, LA, USA
+ofthenetworkcombinedwiththetime-seriesofnetworkmetrics several flows that need to be routed from a source (ingress) router
+are constantly varying – sometimes at a millisecond granularity. to a destination (egress) router. For a given aggregate flow 푘 , let
+Logs from routers and subsystemsprovide additional information ( 푠 푘 ,푑 푘 ,푡 푘 ) denote the source, destination and expected demand
+to determine local changes at these network elements. In addition, (throughput). If the demand is known apriori, then 푡 푘 is a constant.
+there is a control element where feedback within the network can In some use cases, networks are optimized to provide maximum
+beused tounderstandnetwork perturbations,andact atfinetime throughputforallapplications.Insuchcases 푡 푘 isavariablethat
+granularities to get the network back to near-optimal. This rich is to be maximized. Let F be the set of flows that are using the
+set of time-varying data across a network topology graph where network.Let 푥 푘,푖푗 bethecapacitydedicatedbylink ( 푖, 푗 ) tocarry
+controlscanbeappliedfornear-optimaloperationpresentsafertile trafficforflow 푘 .Twotrivialconstraintsarethattheseflowvariables
+ground to solve the problem near-optimally using AI/ML. 푥 푘,푖푗 should be non-negative, and that the total flow on the link
+WhiletheuseofAI/MLisencouraging,therearetwoprimary should be less than its capacity 퐶 푖푗 .
+challenges to overcome to effectively use AI/ML for TE: The other main constraint is flow conservation constraint , which
+1. Local change, global effects: Local effects, such as congestion providesaconstrainttoroute 푡 푘 unitsfromsourcetodestination.
+on one link, can cause the TE protocol to widely shift traffic in a Routinghastoascertainthatwhateverthesourceemitsisconsumed
+network that causes global effects on other flows across a different by the destination, i.e., : (a) only the source 푠 푘 emits the traffic
+partofthenetwork[ 50 ].Hence,unlikeimagedataorevensequence- exactlyequaltothedemand 푡 푘 forflow 푘 ;and(b)onlydestination 푑 푘
+to-sequence data such as language or time-series, it is challenging consumesthetrafficexactlyequalto 푡 푘 ;(c)noneoftheintermediate
+to predict global actions across the network based on observing nodes generate any extra traffic for flow 푘 .
+time-varying network graph. Utility function: The objective function is formulated based on the
+2. Dynamism: The network often has to place varying traffic de- utilitytoeitherend-applicationsornetwork.Thesefunctionsare
+mandsfrommultipleusersonfixedcapacitylinks.Inlargecloud called as utility function .
+networks,trafficdemandspikescannotalwaysbepredicted.Forex- Hence, these class of problems are named as Network Utility
+ample, cloud customers hosting popular games or shows can cause Maximization (NUM) problems [ 38 , 46 , 56 ]. The objective function
+large traffic spikes in particular geo-regions when many clients generally takes the form of: Maximize Í
+푘 ∈F 푈 ( 푘 ) .
+accesstheseresourcesatthesametime.Thisoftencannotbepre- Themostcommonvariablesinutilityfunctionsarethenetworkper-
+dicted since a cloud network hosts multiple customers, and each formancemetrics,whichmayconsistofmetricssuchasminimizing
+customer may be releasing content or having other network-heavy congestion or latency or maximizing throughput or fairness.
+operations,likebackups,basedonaschedulethatisunknownto Utility functions can be classified into two types: (a) Flow or
+the cloud. The network has to dynamically adjust to such loads. end-user utility; (b) Network utility. Flow utility maximizes the
+utility across all the end flows. Examples of end-user utility are
+minimizingtheend-to-endlatency/lossormaximizingtheflowrate
+3 Optimal TE formulation (throughput)sincetheydirectlybenefittheflows/applications/users.
+We first compare system and theoretical approaches towards TE. However,thereareotherformulationsthatmaximizeoverallnet-
+We then describe approaches to model optimal TE, and describe workutility,suchasminimizingthecostofrunningthenetwork
+the key optimization and control models applied in this field. orspreadingthetraffic.Spreadingthetrafficisoftenachievedvia
+Systemprotocols,explainedinSection2.1,arecreativesystem minimizingthemaximumlinkutilization[ 51 , 63 ],orsomefunction
+ideas that balance and weigh several metrics for effective network that allows for maximum residual capacity across edges.
+operation,andhaveexperimentallyshowntobeeffectiveinrun- Certainstudiesoptimizemultiplemetricsbyusingtechniques
+ningtoday’slargenetworks.However,thesesystemheuristicsdo suchasweightedobjectivethatconsidersmultipleparameterssuch
+not clearly define and optimize protocol behavior such as: (a) what as minimizing maximum link utilization and also minimizing la-
+istheobjectivethatthesystemas-a-wholeistryingtooptimize?, tency [ 51 ]. In addition to performance metrics, we can also formu-
+(b) is the system performing in the optimal way, and if not, what is latemetricsthatimprovenetworkperformance,suchasdecrease
+theoptimalitygap?,(c)doesthesolutionconvergeundervarious the cost or guarantee stability. Stabilityof routes intend to avoid
+dynamictrafficandtopologychanges?Answeringsuchquestionsis routeswitchingwhendemandsortopologychangesdynamically
+important because it is uncertain if the intended network behavior within certain bounds. There areseveral attractive properties that
+isbeingdeliveredbytheoperationalnetwork.Moreimportantly, emerge out of NUM formulations, which we will discuss in Sec-
+there can be unintended effects which were not captured by exper- tion 4.2.
+imentally determined system parameters; such conditions could FlowSplitting: Amajordecisioninformulatingthe TEproblemis
+pose a risk for catastrophic network events. thedecisiontoallowflowsplitting.Flowsplittingallowsarouterto
+We now generalize the important aspects of the optimal TE split a single flow fractionally across its multiple outgoing links. If
+problemtodiscussresearchpapersthatanalyzesystemprotocols weallowtheflowtobesplitinfinitesimallyateverynode,themodel
+and build better routing and TE. isreferredtoasa fluidmodel .Suchproblemscanbeformulatedasa
+Werepresentthenetworkasagraph 퐺 (N , E) where N denotes ConvexOptimizationproblem,includingLinearProgramming(LP).
+theset ofnodes(routers)and E representsthe setofedges(direct Theadvantageoftheseproblemsarethattheyarepolynomialtime
+linkorconfiguredroutingsegments)betweenthenodesthatcan solvable. Despite this, in large cloud networks, the large number
+communicate. Let 퐶 푖푗 be the capacity for edge ( 푖, 푗 ) ; this can be ofconstraintsandvariablesmakesitpracticallyimpossibletorun
+the bandwidth of the link (e.g., 10 Gbps ). We assume that there are thesemodelsperiodically[ 66 ].Forexample,CAIDA’sAS-dataset
+
+AIMLSystems 2024, October 08–11, 2024, Baton Rouge, LA, USA Alam et al.
+with a relatively small network size of around 2000 nodes, 9000 are not many optimal formulations. While the optimal TE formula-
+edges and 3 million flows has over 25 billion constraints [ 15 , 66 ]. tions and heuristics can be theoretically extended for inter-domain
+Today’slargecloudnetworkswillbemuchlargerthanthisnetwork. routing, there are challenges: (a) lack of transparency because indi-
+Thesecondcaseistorestrictaflowtotakeasingleorfewpre- vidualnetworkownersoftenimplementproprietarypolicies,and
+specifiedpaths.Thisishelpfulinnetworkswheretherearelarge the data across networks is not shared; and (b) there is a general
+flowsthatshouldnotbesplitbecauseofnetworkingeffectssuch agreement touse standardized protocols, such asBorder Gateway
+as packet reordering.Such formulation converts theproblem into Protocol(BGP),forinter-domainroutingsothatanynetworkcan
+a Multi-Commodity Flow (MCF), which is Mixed Integer Linear talk to any other network; this limits the implementation scope of
+Programming (MILP) and NP-hard [3]. the control mechanisms.
+3.Transmission: Innetworks,anodecantransmitpacketsfromone
+4 Optimal TE Taxonomy nodetoanother(unicasttransmission),orcantransmitthesame
+We present a taxonomy of solutions for optimal TE based on the informationtomultiplenodes(multicast).Avastmajorityofthe
+structure of the problem, as shown in Figure 1. A summary of Internet and optimal TE formulations focus on unicast transmis-
+researchpapersanditscategorizationisinTable1,withseparate sion. However, there are certain networks that support specialized
+AI/ML studies in Table 2. applications that have to optimize for multicast [ 11 , 60 ]. There are
+The first two categories in the taxonomy Network Type and alsooptimal TEfor specialtypesof communication modes, suchas
+ProtocolType arenetworkarchitecturecentric.Thesolutionseither multiple nodes to single node [51].
+solve for Cloud [ 13 , 16 , 28 , 57 , 66 ] or Internet Service Provider
+(ISP) network type [ 22 , 37 , 43 , 59 , 63 ]. The protocol type implies 4.2 Optimizer Properties
+the type of protocols used for TE, which includes either plain IP
+protocols,MPLS[ 11 , 14 , 22 , 47 , 52 ]orSDN[ 28 , 29 , 34 , 57 ].Wedonot Thestudiescanbeclassifiedbasedonhowtheoptimalformulation
+describespecificpapershereunderthesecategories,asourfocusis is trained/executed and the approximations used.
+on generalized optimal TE formulation and AI/ML solutions. 1.Trainingmode: Thetrainingcanbeofflineoronline.Offlinemod-
+els are run or trained either periodically at a large time-granularity
+(e.g., once a day) and the resulting model is used by setting the
+4.1 Controller properties output routing for the rest of the period [ 11 , 37 , 51 , 58 , 63 , 66 ],
+This describes the classification based on what kind of controller is without changing the model parameters. However, offline methods
+being used in the network for which the optimal TE is formulated. are not reactive to the real-time network conditions such as topol-
+The network controller can be distinguished in the following ways: ogy,performance,trafficdemands,orroutingtablechanges.Online
+1. Distributedness: Controllers can be distributed, centralized or algorithms, where the model parameters are updated at a fine-time
+hybrid.DistributedcontrollersareusuallydeployedinIPandMPLS granularity,are hencemoreuseful inrunningnetwork operations
+type of networks where there is no centralized point for con- in large networks [14, 22, 28, 35, 57].
+troller[ 30 ].Severalcontrol-theorybasedNUMformulationbased 2.Layering: Theotherinterestingdimensionisthelayeratwhich
+protocols such as FAST TCP [ 26 , 64 ], explained in Section 3, are the model operates. Many models provide the output for path-
+instancesofdistributednetworkcontrolderivedfromanoptimal computation, where the model emits the routes to be taken, and
+formulation. Centralizedcontrollers aremost amenableto solving otherrulesorprotocolsconfigurethesepaths.Thereareadifferent
+optimizationsincethereisaglobalviewofthenetworkatacentral set of algorithms that operate cross-layer and provide multiple
+point[ 28 , 48 , 66 ].AsexplainedinSection2.1,architecturessuchas network functionalities such as joint rate-control and scheduling.
+SDNs have central controllers where such algorithms can reside. Therearenoteworthycontributionsfromcontroltheoryhereon
+The third type is the hybrid scheme where there are centralized howtoderiveoptimalprotocols[ 38 , 46 , 56 ].Theynotonlypropose
+subcontrollers, which optimize parts of the network, and there are NUMformulationsforoptimalnetworkcontrol,butalsogofurther
+distributedprotocolsorotherhierarchicalcontrollersthatoptimize by using duality theory for designing optimal and stable cross-
+across thesecentralizedsubcontrollers. Very largenetworks such layered algorithms such as rate-control and scheduling [ 17 , 46 , 56 ].
+asplanet-scalecloudsoftenhavethisschemewherethereisaneed Thestudiesprovethat jointcross-layeredoptimizationsuchas
+to coordinate across multiple subcontrollers that optimize differ- rate-control (employed at transport layer for each ingress router
+ent geo-regions of the network. Optimizing TE for such hybrid or application source) and scheduling (running at routing layer on
+networks is an open area of research. eachrouter) canconvergeto optimalandhas provablerobustness
+2. Control Domain: TE can optimize a within a network domain properties.TheseworkshavereverseengineereddistributedTCP/IP
+(intra-domain)orinter-domain.A largenumberofoptimaltraffic congestioncontrolprotocolsstartingfromanoptimalproblem,and
+engineering work focuses on intra-domain because ISPs, cloud and show the stability of the TCP/IP type congestion control – despite
+enterprisenetworkswouldfirstoptimizetrafficwithintheirown feedback delays – in the Internet. FAST TCP [ 26 , 64 ] developed for
+networks[ 30 , 35 , 61 ].Thesenetworkownerscanrunanypropri- optimizing long distance and high latency links was motivated by
+etary protocols within their network, even though most networks decomposition of a primal NUM problem.
+run well-known protocols such as OSPF. 3.Algorithm: SomeproblemscanbesolvedbysolverssuchasLP,
+Inter-domainroutingoptimizesroutesacrossdifferentnetworks MILP or Convex Optimization Solvers [ 18 , 24 , 31 , 45 ]. However, as
+– typically operated by different owners. Several system protocols wediscussedinSection3,evensmallernetworkswitharound2000
+havebeenproposedtooptimizeinter-domainTE[ 19 , 54 ],butthere nodescanhavebillionsofconstraintswhenmodelledasagraph
+
+Towards AI/ML-Driven Network Traffic Engineering AIMLSystems 2024, October 08–11, 2024, Baton Rouge, LA, USA
+Near -optimal
+T raf fic Engineering
+Network  T ype Protocol  T ype Controller Optimizer
+Properties Properties
+Distributedness Control Domain T ransmission T raining Layering Algorithm
+Cloud ISP MPLS IP SDN
+Centralized Intra-domain Multicast Of fline Path
+Computation Optimal
+Decentralized Inter -domain Unicast Online Rate Control
+& Scheduling Heuristics
+Hybrid AI/ML
+Figure 1: Taxonomy of Optimal TE
+to solve optimal TE. Hence, researchers have devised hand-crafted agent is assigned to find paths for a flow, and then each agent gets
+approximationheuristicsthatprovidenear-optimalsolutions[ 22 , the same reward based on collective network state. Such reward
+35 , 62 ].Forexample,TeXCPformulatestheoptimizationproblemto mechanismenablesobservingglobaleffectsbecauseoflocalagent’s
+minimizemaximumlinkutilization,andthenproposesadistributed routingaction,andcollectivelyrewardingallagentstowardsoverall
+online heuristic [ 35 ]. They instantiate agents on multiple nodes network optimality.
+thatuseheuristicstoreduceoscillationsinthenetworkwhilebeing The GDDR paper proposes a GNN based routing by modeling
+reactive to network changes. This is another area where AI/ML thenetworkusingaGNNandusingRL[ 30 ].TEALisanotherinter-
+models can act as fast blackbox inference engines that provide esting study that proposes a different variety of graph formulation
+heuristic optimal TE; we discuss this in the next section. for optimizing large networks [ 66 ]. They first precompute up to
+fourpossibleassignedpathsforeachflow,andthencreateanew
+5 AI and ML Techniques graph called FlowGNN which is a bipartite graph with paths on
+oneset(calledpathnodes)andtheedgesoftheoriginalnetwork
+Section 2.2 discussed two main uses of AI/ML: ability to handle (called edgenodes) onthe otherset. ThisFlowGNN thenutilizes
+different data modalities, and modeling network as a graph to cap- RL to learn how to split traffic along the four paths for a flow.
+ture non-local effects. In addition to these, AI/ML is also useful for Amoreambitiouschallengeandanopenareaofresearchisto
+learning: (a) the state of the network from various forms of data; learncontrolmechanismsinreal-timeoperatingnetworksinanon-
+and (b) how to control the network using feedback mechanisms to line fashion. This will open a valuable research area where control
+reach near-optimal and stable TE. theory meets online optimization of large operational networks
+1.Learningthestateofthenetwork: Operationalnetworksneedto that not only optimize the network, but also can react and stabilize
+understandthenetworktopology,metricsanddemandsfromdif- the network in real-time.
+ferent data sources such as active/passive measurements, topology
+databasesandtime-varyingtrafficdemands.Thegraph,time-series
+andlogmodalitiesofdatacanbescannedtogethertoobservethe
+state of the nodes and edges in the network. This enables solv- 6 Conclusions
+ing optimal TE given the properties of the time-evolving network TrafficEngineering(TE)innetworksisresponsibleforroutingdeci-
+graph, using architectures such as GNN. sionstoprovidethebestuser/applicationexperiencewhileassuring
+For example, one study predicts path failures in the network a stable, secure and cost-efficient network. Solving this problem in-
+using GNN to capture a snapshot of the network at a given time, volves learning the network topology, traffic demands and routing
+andthetemporaldynamicsofthenodesandedgesusingLongShort decisions ina time-varying andhighly dynamic environment.We
+TermMemory(LSTM)[ 27 ]toformatime-evolvingneuralnetwork studythisareafromthreeperspectives:(a)systems,(b)designing
+calledLongShort-TermMemoryR-GCN(LRGCN)[ 42 ].However, optimalcontrolmechanismsusingoptimizationandcontroltheory,
+solvingwithreal-timemetricsofnetworkismorechallengingthan and (c) solving these optimal problems using AI/ML to approxi-
+evaluation on static datasets, since it is vital for operators and mate computationally complex optimal models. We start from a
+downstreamsoftwarecomponentstoactbasedonreal-timedata theoretical formulation and then explain heuristics employed to
+to fix network degradation observed by customers. This is an open solve for large operational networks. We present a taxonomy of
+area of research. existingworkbasedonnetwork-andformulation-centricproper-
+2.Learningtocontrolinreal-time: StudiesemployReinforcement ties.Wethencategorizethestudiesbasedondifferentvarietiesof
+Learning (RL) to learn how to control routing, in addition to learn- the problem being solved and approximations. Finally, we identify
+ingthestateofthenetwork[ 5 , 23 , 48 , 65 ].Theyusuallysimulate open research topics for the application of AI/ML towards building
+multiple scenarios using multi-agent centralized RL where each a system for realizing near-optimal routing and TE.
+
+AIMLSystems 2024, October 08–11, 2024, Baton Rouge, LA, USA Alam et al.
+Title of the Paper Optimization Objective Categories
+Explicit Routing Algorithms for Internet Traffic Engineering Minimizing the maximum of link utilization across all links ISP,MPLS, Centralized,Unicast,Offline,
+(1999) [63] Optimal, Path-computation
+Traffic Engineering using Multiple Multipoint-to-Point LSPs Minimize the number of LSP routes while ensuring availabil- ISP, MPLS, Centralized, Multicast, Of-
+(2000) [51] ity, and reduce maximum link utilization on paths with a fline, Optimal, Path-computation
+limited hop count
+Minimum Interference Routing of Bandwidth Guaranteed MinimizeLSPinterference,maximizefutureaccommodations ISP, MPLS, Decentralized, Unicast, Of-
+Tunnels with MPLS TE Applications (2000) [37] fline, Heuristics, Path-computation
+Engineering the Multi-Service Internet: MPLS and IP-based MinimizeLSPbandwidthallocation,SatisfyQoS,distribute ISP, IP/MPLS, Centralized, Unicast, Of-
+Techniques (2001) [59] load, minimize overall cost fline,Heuristics,Path-computation+Dy-
+namic
+MATE: MPLS Adaptive Traffic Engineering (2001) [22] ProvidetrafficdistributionamongpreconstructedstaticLSPs, ISP, MPLS, Decentralized, Unicast, On-
+probing and load-balancing, minimize total cost line, Heuristics, Path-computation
+DORA:EfficientRoutingforMPLSTrafficEngineering(2002) Maximize future traffic accommodation by minimizing inter- MPLS, Unicast, Online, Heuristics, Dy-
+[14] ference and maximizing residual bandwidth namic
+SPeCRA: A Stochastic Performance Comparison Routing Minimize the rejection ratio of LSP setup requests, minimize MPLS, Unicast, Online, Heuristics, Dy-
+Algorithm (2002) [20] interference namic
+Quality of Service Provisioning through Traffic Engineering Minimize network load (own definition link utilization) after ISP, DiffServ/MPLS, Offline, Optimal,
+(2003) [58] satisfying QoS constraints Path-computation
+Creating Multipoint-to-Point LSPs for Traffic Engineering Minimize the number of M-t-p trees, optimal merging ISP,MPLS,Centralized,Multicast,Offline
+(2003) [11] + Online, Heuristics, Path-computation
+A Preemption-Aware On-line Routing Algorithm for MPLS Maximize network performance (utilization) by preemption ISP,MPLS,Decentralized,Online,Heuris-
+Networks (2003) [12] and provides stability tics
+TEAM: A Traffic Engineering Automated Manager for Maximize network performance (utilization) by preemption ISP, DiffServ/MPLS, Centralized, Online,
+DiffServ-Based MPLS Networks (2004) [52] and provides stability Heuristics
+New Preemption Policies for DiffServ-Aware Traffic Maximize network performance by minimizing rerouting ISP, MPLS, Heuristics
+Engineering (2004) [21]
+Walking the Tightrope: Responsive Yet Stable Traffic Minimizethemaximumutilizationwithoutcreatingoscilla- Intra-domain,IP,Decentralized,Online,
+Engineering (2005) [35] tions Heuristics
+COPE: Traffic Engineering in Dynamic Networks (2006) [ 62 ] Optimize performance while providing worst case guarantee ISP, Heuristics
+Latency Inflation with MPLS-Based Traffic Engineering Suggests guidelines to alleviate latency inflation in service Cloud, MPLS, Heuristics
+(2011) [47] networks
+Achieving High Utilization with Software-Driven WAN Maximizethroughputwhilechoosinglow-latencypaths,min- Cloud, SDN, Centralized, Online, Heuris-
+(2013) [28] max fairness tics
+B4: Experience with a globally-deployed software defined Maximize link utilization/throughput and ensure min-max Cloud, SDN, Centralized, Online
+WAN (2013) [57] fairness across priority classes
+Traffic Engineering with Forward Fault Correction (2014) Incorporatefaulttolerancebyproactivelyhandlinguptok ISP, Centralized, Online, Heuristics
+[43] simultaneous faults to maintain TE allocations
+Calendaring for Wide Area Networks (2014) [36] Optimize large, long-term transfer scheduling based on pre- Cloud, Centralized, Online, Heuristics
+assigned deadlines to maximize throughput
+Optimizing Bulk Transfers with Software-Defined Optical Achieve higher throughputs by rapid reconfiguration of opti- Cloud, ISP, SDN, Centralized, Online,
+WAN (2016) [34] cal topology for bulk transfers Heuristics
+Dynamic Pricing and Traffic Engineering for Timely Dynamicallypriceandschedulebandwidthtransfersbased Cloud, SDN, Centralized, Online, Heuris-
+InterDatacenter Transfers (2016) [32] on deadlines and priority to optimize costs tics
+Taking the Edge off with Espresso: Scale, Reliability and Optimizeclientperformanceattheedgebymovingpacket Cloud, ISP, SDN, Centralized, Unicast,
+Programmability for Global Internet Peering (2017) [68] processing to software Online, Heuristics
+RADWAN: Rate Adaptive Wide Area Network (2018) [55] Maximize bandwidth while minimizing reconfiguration Cloud, IP, Centralized, Online
+churn on optical links
+B4 and After (2018) [29] Scale and manage hierarchical SDN to meet availability and Cloud, SDN, Centralized-decentralized,
+traffic demands Hierarchical, Online
+Semi-oblivious Traffic Engineering: The Road Not Taken Improveloadbalancingandlinkfailureresilienceusingobliv- Cloud/ISP, Centralized, Online
+(2018) [41] ious routing
+TEAVAR: Striking the Right Utilization-availability Balance Optimize WAN traffic considering probabilistic link failures Cloud, SDN, Centralized, Offline
+in WAN Traffic Engineering (2019) [13] to avoid overprovisioning capacity
+Lancet: Better Network Resilience by Designing for Pruned Design network resilience strategies for specific failure sets SDN, Offline + Online, Heuristics
+Failure Sets (2019) [16]
+Cost-effective Cloud Edge Traffic Engineering with Cascara Minimize inter-domain bandwidth costs using latency- Inter-domain, Cloud, Centralized, SDN,
+(2021) [54] equivalent peer links Offline, Heuristics
+Contracting Wide-area Network Topologies to Solve Flow Scale traffic engineering by contracting network paths SDN, Offline, Heuristics
+Problems Quickly (2021) [1]
+CodedBulk: Inter-datacenter Bulk Transfers using Network Enablehigh-throughputinter-datacenterbulktransfersusing Cloud, TCP/MPLS, Multicast, Optimal
+Coding (2021) [60] network coding
+Shoofly: Cost-effective Capacity Provisioning in Wide Area Optimize WAN topology by identifying cost-effective optical Cloud, Centralized, Offline
+Networks with Shoofly (2021) [54] bypasses
+Decentralized Cloud Wide-area Network Traffic Engineering Enhance fault tolerance in centralized cloud TE by partition- Cloud, Decentralized, Online
+with BLASTSHIELD (2022) [40] ing the WAN into slices
+Table 1: Summary of Traffic Engineering Papers
+
+Towards AI/ML-Driven Network Traffic Engineering AIMLSystems 2024, October 08–11, 2024, Baton Rouge, LA, USA
+Name of the Paper Optimization Objective Categories
+Learning to Route (2017) [61] Learn effective routing configurations using machine Intra-domain, ISP, IP, Online, Ma-
+learning chine Learning
+Experience-driven Networking: A Deep Implement a model-free control framework using SDN, Centralized, Online, Machine
+Reinforcement Learning based Approach (2018) [65] deep reinforcement learning (DRL) Learning
+CFR-RL: Traffic Engineering With Reinforcement Usereinforcementlearningtoselectandreroutecriti- SDN, Centralized, Online, Machine
+Learning in SDN (2020) [69] cal flows in SDN Learning, Reinforcement Learning
+Towards Real-time Routing Optimization with Deep Optimize real-time routing using deep reinforcement Online, Machine Learning
+Reinforcement Learning: Open Challenges (2021) [ 5 ] learning
+GDDR: GNN-based Data-driven Routing (2021) [30] Apply GNN-based data-driven routing for enhanced Intra-domain, Decentralized, On-
+network performance line,MachineLearning,Reinforce-
+ment Learning
+TEAL: Learning-accelerated Optimization of WAN Accelerate WAN traffic engineering optimization Cloud, Centralized, Online, Ma-
+Traffic Engineering (2023) [66] through learning techniques chine Learning, Reinforcement
+Learning
+DOTE: Rethinking (Predictive) WAN Traffic Rethink WAN traffic engineering with predictive and Centralized,Online,MachineLearn-
+Engineering (2023) [48] machine learning approaches ing
+Traffic Engineering in a Shared Inter-DC WAN via Optimizes inter-DC and internet traffic using MILP Cloud, Centralized, Online, Ma-
+Deep Reinforcement Learning (2023) [23] formulationandRLtechniqueswithreal-worldtraces chine Learning, Reinforcement
+Learning
+Table 2: Summary of AI/ML Traffic Engineering Papers
+References [14] RaoufBoutaba,WayneSzeto,andYoussefIraqi.2002.
+[1] Firas andPeterBailis.2021. Abuzaid, Srikanth
+problems quickly. 18th Contractingwide-areanetworktopologiestosolveflow Kandula, Behnaz Arzani, Ishai Menache, Matei Zaharia, (2002), forMPLStrafficengineering. JournalofNetworkandSystemsManagement DORA:Efficientrouting
+[15] 309–325. 10
+Implementation (NSDI In
+IjazAhmad,ShariarShahabuddin,HassanMalik,ErkkiHarjula,TeemuLeppänen, 21) . USENIX 175–200. Symposium on Networked Systems Design and CAIDA.2024. datasets/as-relationships/ TheCAIDAUCSDASRelationships . https://www.caida.org/catalog/
+[2] [16] Yiyang malani. Chang, 2019. Lancet: Chuan Better Jiang, network Ashish resilience Chandra, by Sanjay designing Rao, and
+Lauri for pruned Mohit Tawar-
+sets. 3, 3 (2019), Proceedings 1–26. of the ACM on Measurement and Analysis of Computing Systems failure
+Markku Lovén, Juntti, Antti Antti Anttonen, Ylä-Jääski, Ali Thilo Hassan Sauter, Sodhro, Andrei Muhammad Gurtov, Mika Mahtab Ylianttila, Alam,
+and Current Jukka Trends Riekki. and 2020.
+https://doi.org/10.1109/ACCESS.2020.3041765 Future Machine Challenges. Learning IEEE Meets Access Communication 8 (2020), 223418–223460. Networks: [17] Mung LayeringasOptimizationDecomposition:AMathematicalTheoryofNetwork Chiang, Steven H. Low, A. Robert Calderbank, and John C. Doyle. 2007.
+[3] RavindraK.Ahuja,ThomasL.Magnanti,andJamesB.Orlin.1993. Architectures.
+[4] theory, Mohammed algorithms, Ali Al-Garadi, and applications
+Mohsen Guizani. Amr Mohamed, . Prentice-Hall,
+A Survey Abdulla Inc., Khalid USA. Networkflows:
+Ihsan MethodsforInternetofThings(IoT)Security. Ali, and 2020. of Machine Al-Ali,
+IEEECommunicationsSurveys& and Deep Xiaojiang Learning Du, [18] 2006.887322 Proc.IEEE 95,1(2007),255–312. https://doi.org/10.1109/JPROC.
+[19] CVX Sukrit Research, Dasgupta, Inc. Jaudelice 2024. CVX
+Computation-Element-BasedArchitectureforInterdomainMPLS/GMPLSTraffic C. De . https://cvxr.com/ Oliveira, and Jean-Philippe Vasseur. 2007. Path-
+[5] Tutorials Paul Almasan, 22, 3 (2020), Engineering: https://doi.org/10.1109/MNET.2007.386468 Overview and Performance. IEEE Network 21, 4 (2007), 38–45.
+Albert José Suárez-Varela, 1646–1685. https://doi.org/10.1109/COMST.2020.2988293
+Cabellos-Aparicio. 2021. Towards Bo Wu, real-time Shihan Xiao, routing Pere optimization Barlet-Ros, with and [20] Jaudelice SPeCRA:AstochasticperformancecomparisonroutingalgorithmforLSPsetupin Cavalcante de Oliveira, Francesco Martinelli, and  C  Scoglio. 2002.
+deepreinforcementlearning:Openchallenges.In
+[6] Conference AmazonWebService.2024. on High Performance Switching and Routing 2021IEEE22ndInternational
+about-aws/global-infrastructure/ AWSGlobalInfrastructure . https://aws.amazon.com/ (HPSR) . IEEE, 1–6. MPLS IEEE , Vol. networks. 3. IEEE, In 2190–2194. Global Telecommunications Conference, 2002. GLOBECOM’02.
+[21] JaudeliceCavalcantedeOliveira,CaterinaScoglio,IanFAkyildiz,andGeorge
+[7] Alia RSVP-TE Atlas, for George LSP Tunnels. Swallow,
+1999. RFC and
+O 4090. Ping
+and https://doi.org/10.17487/RFC4090 Pan. 2005. Fast Reroute Extensions to Uhl. 2004. New preemption policies for DiffServ-aware traffic engineering
+4 minimize (2004), 733–745. rerouting in MPLS networks. IEEE/ACM transactions on networking 12, to
+[8] Daniel communications Awduche.
+[9] Daniel O. Awduche, Magazine Berger, 37, MPLS 12 (1999), traffic 42–47. engineering in IP networks. IEEE [22] AnwarElwalid,ChengJin,StevenLow,andIndraWidjaja.2001.
+and George Swallow. Lou 2001. RSVP-TE: Der-Hwa Gan, Tony Li, Dr. Vijay Srinivasan, adaptive on Computer Computer traffic Communications. engineering. In Proceedings IEEE INFOCOM MATE:MPLS
+3209. https://doi.org/10.17487/RFC3209 Extensions to RSVP for LSP Tunnels. RFC and Communications Twentieth Annual 01CH37213) Joint Conference 2001. Conference
+[23] 1309. Society (Cat. No. , Vol. 3. IEEE, of the 1300– IEEE
+[10] Roman Search of Beltiukov, netUnicorn: Wenbo
+NetworkSecurityProblems. A Data-Collection Guo, Arpit Gupta,
+Modelsfor In Platform and
+Proceedingsof to Walter Develop Willinger.
+the2023ACM Generalizable 2023. Yingya in a Shared Guo, Inter-DC Yulong Ma,
+Science WAN Huan
+Engineering via Deep Luo, and Reinforcement Jianping Wu. Learning. 2022. Traffic
+1109/TNSE.2022.3172283 on Network and 9, 4 (2022), 2870–2881. https://doi.org/10. IEEE Transactions Engineering
+(CCS’23) .AssociationforComputingMachinery,NewYork,NY,USA,2217–2231. (Copenhagen,Denmark) SIGSAC ML In
+ConferenceonComputerandCommunicationsSecurity
+[11] https://doi.org/10.1145/3576915.3623075 [24]
+Sudeept [25] Gurobi. JamesHamilton.2016. 2024. Gurobi solver
+https://www.youtube.com/watch?v=AyOAjFNPAbA AWSre:Invent2016:TuesdayNightLivewithJamesHamil- . https://www.gurobi.com/
+to-PointLSPsfortrafficengineering.In Bhatnagar, Samrat Ganguly, and Badri Nath. 2003. Creating Multipoint-
+[12] and Francois Routing, Blanchy, 2003, HPSR. Laurent IEEE, 201–207. WorkshoponHighPerformanceSwitching [26] ton Sanjay .
+ChengJin,StevenLow,andHarveyNewman.2004. Hegde, David Lapsley, Bartek Wydrowski, FASTTCPinHigh-Speed Jan Lindheim, David Wei,
+[27] Networks: Sepp Hochreiter An Experimental
+(2003), on-line 187–206. routing algorithm for Mélon, MPLS and networks. Guy Leduc. Telecommunication 2003. A preemption-aware Systems 24
+[13] Asaf Jeremy Valadarsky, Bogle, Nikhil Neural Computation and Jürgen Study. Schmidhuber. In Proceedings
+1735–1780. 1997. of
+8 https://doi.org/10.1162/neco.1997.9. Long GridNet
+9, (1997), Short-Term . Memory.
+and Bhatia,
+utilization-availability balance Michael Manya Schapira. Ghobadi, 2019. Ishai TEAVAR: Menache, striking Nikolaj the Bjørner,
+[28] 8.1735
+ACM Special Interest Group on Data in WAN Communication traffic engineering. . 29–43. In Proceedings of right the Chi-YaoHong,SrikanthKandula,RatulMahajan,MingZhang,VijayGill,Mohan Nanduri,andRogerWattenhofer.2013.
+15–26. drivenWAN.In ProceedingsoftheACMSIGCOMM2013ConferenceonSIGCOMM Achievinghighutilizationwithsoftware- .
+
+AIMLSystems 2024, October 08–11, 2024, Baton Rouge, LA, USA Alam et al.
+[29] Chi-YaoHong,SubhasreeMandal,MohammadAl-Fares,MinZhu,RichardAlimi, ChandanBhagat,SourabhJain,JayKaimal,ShiyuLiang,KirillMendelev,etal 2018. ability B4and and scale after:managinghierarchy, google’s software-defined partitioning,andasymmetryforavail- . [52] IEEE, Caterina 894–901.
+and
+Conference of the in based  G  UhI. Scoglio,
+MPLS 2004. TEAM: Tricha Anjali, A traffic Jaudelice engineering Cavalcante automated de Oliveira, manager Ian for F DiffServ- Akyildiz,
+[30] OliverHope andEiko ACM Yoneki.2021. Special Interest GDDR: Group on WAN. Data Communication In Proceedings of [53] networks. IEEE Communications Magazine 42, 10 (2004), 134–145.
+Xu. Kamran
+theLastDecade. 2020. Shaukat, A Survey Suhuai on Machine Luo, Vijay
+8(2020),222310–222354. Learning Varadharajan, Techniques Ibrahim for A.
+IEEEAccess Cyber Hameed, Security and Min
+2021IEEE41stInternationalConferenceonDistributedComputingSystems(ICDCS) GNN-baseddata-driven routing.In . 74–87. the 2018
+[31] IEEE,
+studio 2024. 517–527. . https://doi.org/10.1109/ in
+IBM. CPLEX . https://www.ibm.com/products/ilog-cplex-optimization- [54] ACCESS.2020.3041951
+[32] VirajithJalaparti,IvanBliznets,SrikanthKandula,BrendanLucier,andIshaiMen- JamieGaudette.2021. Rachee Singh, Nikolaj Cost-effectivecapacityprovisioninginwideareanetworks Bjorner, Sharon Shoham, Yawei Yin, John Arnold, and
+ache.2016. transfers. In Dynamicpricingand [55] withShoofly.In RacheeSingh,ManyaGhobadi,Klaus-TychoFoerster,MarkFiler,andPhillipa Proceedingsofthe2021ACMSIGCOMM2021Conference .534–546.
+[33] Weiwei Jiang. Proceedings 2022. Graph-based of the 2016 trafficengineeringfortimely
+deep ACM learning SIGCOMM Conference inter-datacenter
+ComputerCommunications 185(2022),40–54. for communication . 73–86.
+survey. https://doi.org/10.1016/j. networks: A Gill.2018.
+[56] Conference RADWAN:rateadaptivewideareanetwork.In
+Rayadurgam of the ACM Special Interest Group on Data Communication Proceedingsofthe2018 . 547–560.
+tems Sushant and Control: Srikant.2004.
+et. Foundations The
+[34] comcom.2021.12.015
+Jennifer XinJin,YiranLi,DaWei,SimingLi,JieGao,LeiXu,GuangzhiLi,WeiXu,and 2013. and Mathematicsof Applications) InternetCongestion
+[57] defined WAN. Jain ACM al. SIGCOMM B4: Experience Communication with . SpringerVerlag. Control(Sys-
+Computer a globally-deployed
+3–14. Review 43, software 4 (2013),
+[35] WAN. SrikanthKandula,DinaKatabi,BruceDavie,andAnnaCharny.2005. In Rexford.2016. Proceedings of Optimizing the 2016 ACM bulk SIGCOMM transferswith Conference software-defined . 87–100. optical
+tightrope: Responsive yet stable traffic engineering. ACM SIGCOMM Walkingthe [58] PanosTrimintzios,TimothyBaugé,GeorgePavlou,ParisFlegkas,andRichard Egan.
+[36] Communication SrikanthKandula,IshaiMenache,RoySchwartz,andSpandanaRajBabbula.2014. Review 35, 4 (2005), 253–264. Computer
+Calendaring
+[37] on SIGCOMM forwide . 515–526. areanetworks. In Proceedingsof the 2014ACM conference (2003), applicability 2003. Quality
+845–860. to IP-based of service production provisioning networks. through Computer traffic Communications engineering with 26, 8
+[59] PanosTrimintzios,LeonidasGeorgiadis,GeorgePavlou,DavidGriffin,Carlos
+KoushikKar,MuraliKodialam,andTVIEEELakshman.2000. Frederico
+ence 2001. Engineering Marcelo da the Cunha
+applications. routing of IEEE bandwidth Journal guaranteed on selected areas tunnels in with MPLS Minimuminterfer-
+communications traffic 18, engineering (2001). multi-service Cavalcanti, internet: Panos MPLS Georgatsos, and IP-based and  C  techniques. Jacquenet.
+2566–2579. 12 (2000), [60] Shih-HaoTseng,SakshamAgarwal,RachitAgarwal,HiteshBallani,andAoTang.
+[38] F.P.Kelly,A.K.Maulloo,andD.K.H.Tan.1998. 2021.
+Networks: Shadow Prices, Proportional Fairness RateControlforCommunication In 18th { CodedBulk USENIX 15–28. Symposium } : { Inter-Datacenter on Networked } BulkTransfersusingNetworkCoding.
+Operational 3010473 Research Society 49, 3 (1998), 237–252. and http://www.jstor.org/stable/ Stability. The Journal of the [61] (NSDI AsafValadarsky,MichaelSchapira,DafnaShahaf,andAvivTamar.2017. 21) . Systems Design and Implementation
+[39] HyojoonKimandNickFeamster.2013. to route. In Proceedings of the 16th ACM workshop on hot topics in networks Learning .
+[62] 191. 185–
+Hao Greenberg.2006. Wang, Haiyong COPE:Trafficengineeringindynamicnetworks.In Xie, Lili Qiu, Yang Richard Yang, Yin Zhang,
+[40] 119. software
+Umesh https://doi.org/10.1109/MCOM.2013.6461195 defined networking. IEEE Communications Improvingnetworkmanagementwith Magazine 51, 2 (2013), 114–
+2022. Krishnaswamy, Decentralized conferenceon Applications,technologies, protocolsfor Proceedings and Albert
+of computer the2006
+[63] Yufei Wang communications
+Implementation } . 19th cloud Rachee
+USENIX wide-area Singh, Nikolaj
+and Symposium network Bjørner,
+BLASTSHIELD 22) 325–338. Networked traffic and
+In engineering Himanshu
+{ Systems Design with Raj.
+[41] Praveen pukhov,ChiunLinLim,andRobertSoulé.2018. Kumar, Yang (NSDI . on
+Yuan, Chris Yu, Nate Foster, { Semi-oblivious Robert Kleinberg, traffic engineering. and Zheng Proceedings Wang. . 99–110. architectures,and
+Communications In 1999.
+David X. Wei, Networks (Cat. Eight Explicit
+No. International routing
+and . IEEE, Conference algorithms
+582–588. on for Computer internet
+neering:Theroadnottaken.In 15thUSENIXSymposiumonNetworkedSystems } trafficengi- Petr La- [64] 99EX370)
+Motivation, Architecture, Cheng Jin, Algorithms, Steven H. Low,
+1246–1259. Performance. and Sanjay IEEE/ACM Hegde. 2006.
+Networking 6 (2006), Transactions FAST TCP:
+[42] Design Jia
+’19) and Li, Zhichao and Implementation
+. Pan. 2019. Han, Hong (NSDI
+Predicting Cheng, 18) Jiao . 157–170.
+Lujia for Computing Path Failure Su, Pengyun
+https://doi.org/10.1145/3292500.3330847 Association Machinery, New In Time-Evolving Wang, Jianfeng
+York, NY, USA, Graphs Zhang,
+1279–1289. (KDD [65] Zhiyuan Xu, 14, Tang, Jingsong Meng, https://doi.org/10.1109/TNET.2006.886335 on
+Liu,andDejunYang.2018. Jian Experience-drivennetworking:Adeepreinforcement Weiyi Zhang, Yanzhi Wang, Chi Harold
+learning
+[66] communications based approach. . IEEE, 1871–1879. In IEEE INFOCOM 2018-IEEE conference on computer
+[43] HongqiangHarryLiu,SrikanthKandula,RatulMahajan,MingZhang,andDavid Gelernter.2014. of Trafficengineeringwithforwardfaultcorrection.In Proceedings Zhiying andMinlanYu.2023. Xu, Francis Teal:Learning-AcceleratedOptimizationofWANTraffic Y. Yan, Rachee Singh, Justin T. Chiu, Alexander M. Rush,
+[44] Deep the Medhi 2014 ACM and Karthik Conference
+(Second Ramasamy. on SIGCOMM
+Morgan (second 2018. .
+Network Edition) Chapter 527–538.
+Routing edition ed.), 7 - IP Engineering.In NY, USA) (ACM ProceedingsoftheACMSIGCOMM2023Conference
+Ramasamy B978-0-12-800737-2.00009-0 (Eds.). Kaufmann, Boston, 214–258. Deep Traffic
+https://doi.org/10.1016/ Medhiand Engineering. Karthik In
+[67] York, Lei NY, USA, 378–393. SIGCOMM https://doi.org/10.1145/3603269.3604857 ’23) . Association for Computing Machinery, (NewYork, New
+[45] Guofei Xue, Gu. Xiaobo 2018. Ma,
+Transactions LinkScope: Xiapu Luo,
+on Information Toward Edmond
+IEEE Detecting W. W.
+Security Target Chan,
+13, Link Tony
+and 10 (2018), Flooding T. N. Miu,
+2423–2438. Attacks. and
+[46] Mosek. D.P. network Palomar 2024.
+utility and MOSEK
+maximization. Mung . https://www.mosek.com/ Chiang. IEEE 2006. A tutorial on decomposition methods for
+24, 8 (2006), 1439–1451. https://doi.org/10.1109/JSAC.2006.879350 Journal on Selected Areas in Communications https://doi.org/10.1109/TIFS.2018.2815555 Forensics
+[68] Kok-Kiong
+[47] Abhinav man,GaryBaldus,MarcusHines,TaeeunKim,AshokNarayanan,AnkurJain, Yap, MurtazaMotiwala, JeremyRahe, StevePadgett, MatthewHolli-
+2011. et
+ACM LatencyinflationwithMPLS-basedtrafficengineering.In Pathak, Ming Zhang, Y Charlie Hu, Ratul Mahajan,
+Internet measurement conference Proceedingsofthe and Dave Maltz. bility al. 2017. for global Taking internet the edge
+Group Data peering. off with In espresso: Proceedings Scale,
+Special Interest on . 432–445. of the reliability Conference and programma-
+JunjieZhang,MinghaoYe,ZehuaGuo,Chen-YuYen,andHJonathanChao.2020. Communication of the ACM
+[48] 2011 Yarin Perry, SIGCOMM
+Menache, Michael Felipe conference
+Schapira, Vieira Frujeri, on
+(Predictive) { WAN and Aviv Chaim Tamar. Hoch, Srikanth Kandula, . 463–472.
+2023. { DOTE } : Rethinking Ishai [69] CFR-RL:
+worked on Selected Trafficengineering Areas in Communications with reinforcement 38, 10 (2020), learningin 2249–2259. SDN. IEEE Journal
+Pi, Systems Design } Traffic and Implementation Engineering. In
+[49] Jamin, Danzig, Feng (NSDI 20th
+Yibo and 23) USENIX
+Sugih . 1557–1581. Symposium on Net-
+AmongInternetLoad-BalancedPaths:ACloud-CentricView. Peter Qian. 2020. Latency
+Anal. 3392150 Comput. Syst. 4, 2, Article 32 (jun 2020), 29 pages. https://doi.org/10.1145/ Proc.ACMMeas. Imbalance
+[50] GomathiRamachandran.2024.
+&NETworkS(COMSNETS) Performance.In 202416thInternationalConferenceonCOMmunicationSystems Control-PlaneObservabilityThroughData-Plane
+[51] 2024.10426959 .889–896. https://doi.org/10.1109/COMSNETS59351.
+Hiroyuki using multiple Saito, Yasuhiro Miyao, and Makiko Yoshida.
+Computer multipoint-to-point LSPs. In Nineteenth Proceedings 2000. IEEE Traffic
+Conference on Annual Joint INFOCOM engineering
+ofthe IEEEComputer andCommunications Communications. 00CH37064) Conference 2000.
+Societies(Cat.No. ,Vol. 2.
