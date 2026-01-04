@@ -52,8 +52,8 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string
                 let lastY = -1;
 
                 for (const textItem of texts) {
-                  // decode text runs
-                  const itemText = textItem.R.map((run: any) => decodeURIComponent(run.T)).join('');
+                  // decode text runs and join with space to avoid merging words
+                  const itemText = textItem.R.map((run: any) => decodeURIComponent(run.T)).join(' ');
 
                   if (itemText.trim().length === 0) continue;
 
