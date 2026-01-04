@@ -43,15 +43,33 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<{ text: string
           if (pdfData.Pages) {
             for (const page of pdfData.Pages) {
               if (page.Texts) {
-                for (const textItem of page.Texts) {
-                  for (const run of textItem.R) {
-                    if (run.T) {
-                      text += decodeURIComponent(run.T) + ' ';
-                    }
+                // Sort texts by Y then X to ensure correct reading order
+                const texts = [...page.Texts].sort((a: any, b: any) => {
+                  if (Math.abs(a.y - b.y) > 0.5) return a.y - b.y;
+                  return a.x - b.x;
+                });
+
+                let lastY = -1;
+
+                for (const textItem of texts) {
+                  // decode text runs
+                  const itemText = textItem.R.map((run: any) => decodeURIComponent(run.T)).join('');
+
+                  if (itemText.trim().length === 0) continue;
+
+                  // Check for new line (if Y difference is significant)
+                  // pdf2json units are roughly 1 unit = ?? pixels, but typically line height is around 1ish
+                  if (lastY !== -1 && Math.abs(textItem.y - lastY) > 0.5) {
+                    text += '\n';
+                  } else if (text.length > 0 && !text.endsWith('\n')) {
+                    text += ' ';
                   }
+
+                  text += itemText;
+                  lastY = textItem.y;
                 }
               }
-              text += '\n';
+              text += '\n\n'; // Double newline between pages
             }
           }
 
