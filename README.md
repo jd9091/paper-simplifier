@@ -3,8 +3,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Demo](https://img.shields.io/badge/Demo-Live-green)](https://paper-simplifier.vercel.app)
 
 Transform academic papers into clear, digestible content with AI-powered analysis and visualization.
+
+**🚀 [Try the Live Demo](https://paper-simplifier.vercel.app)**
+
 
 ## Features
 
