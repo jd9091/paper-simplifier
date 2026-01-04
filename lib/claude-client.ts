@@ -116,10 +116,32 @@ export async function parseSections(text: string): Promise<Array<{ title: string
   }
 }
 
+// Helper for limiting concurrency
+async function mapAsync<T, U>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<U>
+): Promise<U[]> {
+  const results: U[] = [];
+  const chunks = [];
+
+  for (let i = 0; i < items.length; i += concurrency) {
+    chunks.push(items.slice(i, i + concurrency));
+  }
+
+  for (const chunk of chunks) {
+    const chunkResults = await Promise.all(chunk.map(fn));
+    results.push(...chunkResults);
+  }
+
+  return results;
+}
+
 function createFallbackSections(text: string): Array<{ title: string; content: string }> {
   // Try to split by common section headers
+  // Updated regex to handle numbered sections (e.g., "1. Introduction", "2 Methods")
   const sectionPatterns = [
-    /(?:^|\n)(Abstract|Introduction|Background|Methods?|Methodology|Results?|Discussion|Conclusion|References)[\s:]*\n/gi,
+    /(?:^|\n)(?:\d+\.?\s+)?(Abstract|Introduction|Background|Methods?|Methodology|Results?|Discussion|Conclusion|References)[\s:]*\n/gi,
   ];
 
   const sections: Array<{ title: string; content: string }> = [];
@@ -300,22 +322,20 @@ export async function processPaper(
   // Parse sections
   const rawSections = await parseSections(text);
 
-  // Process each section in parallel
-  const sections: PaperSection[] = await Promise.all(
-    rawSections.map(async (section) => {
-      const [simplifiedContent, diagram] = await Promise.all([
-        simplifySection(section.content, userLevel),
-        generateDiagram(section.title, section.content),
-      ]);
+  // Process sections with concurrency limit of 3 to avoid timeouts/rate-limits
+  const sections = await mapAsync(rawSections, 3, async (section) => {
+    const [simplifiedContent, diagram] = await Promise.all([
+      simplifySection(section.content, userLevel),
+      generateDiagram(section.title, section.content),
+    ]);
 
-      return {
-        title: section.title,
-        originalContent: section.content,
-        simplifiedContent,
-        diagram: diagram || undefined,
-      };
-    })
-  );
+    return {
+      title: section.title,
+      originalContent: section.content,
+      simplifiedContent,
+      diagram: diagram || undefined,
+    };
+  });
 
   return {
     metadata,
