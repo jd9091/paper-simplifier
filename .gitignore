@@ -25,6 +25,7 @@ yarn-error.log*
 # Local env files
 .env*.local
 .env
+.env.local.vercel
 
 # Vercel
 .vercel
@@ -42,3 +43,7 @@ next-env.d.ts
 *.swp
 *.swo
 *~
+.env.local.vercel
+# Add to .gitignore
+sample_paper.pdf
+.bfg-report/

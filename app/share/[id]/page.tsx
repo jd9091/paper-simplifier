@@ -4,6 +4,7 @@ import PaperSection from '@/components/PaperSection';
 import FloatingNav from '@/components/FloatingNav';
 import PaperOverview from '@/components/PaperOverview';
 import KeyFindingsSection from '@/components/KeyFindingsSection';
+import ReadingProgress from '@/components/ReadingProgress';
 import Link from 'next/link';
 import { USER_LEVELS } from '@/lib/types';
 
@@ -23,6 +24,9 @@ export default async function SharePage({ params }: PageProps) {
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      {/* Reading Progress Bar */}
+      <ReadingProgress />
+
       {/* Floating Navigation */}
       <FloatingNav sections={paper.sections} title={paper.metadata.title} />
 

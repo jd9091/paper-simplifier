@@ -37,6 +37,13 @@ function extractFirstSentence(text: string): string {
   return firstSentence.length > 200 ? firstSentence.substring(0, 200) + '...' : firstSentence + '.';
 }
 
+// Helper function to add anchors to individual references in References section
+function addReferenceAnchors(content: string): string {
+  // Match [number] at the start of lines or after newlines in reference lists
+  // Add an invisible anchor span before each reference number
+  return content.replace(/\[(\d+)\]/g, '<span id="ref-$1" class="reference-anchor"></span>[$1]');
+}
+
 // Helper function to extract short summary (3-5 sentences)
 function extractShortSummary(content: string): string {
   // Split content into lines
@@ -83,8 +90,13 @@ function extractShortSummary(content: string): string {
 }
 
 export default function PaperSection({ section, index }: PaperSectionProps) {
+  // Check if this is the References section - needs to be determined first
+  const isReferencesSection = section.title.toLowerCase().includes('reference') ||
+                               section.title.toLowerCase().includes('bibliography');
+
   const [isExpanded, setIsExpanded] = useState(true);
-  const [showOriginal, setShowOriginal] = useState(false);
+  // References section always shows original content (no simplification needed for citations)
+  const [showOriginal, setShowOriginal] = useState(isReferencesSection);
   const [contentMode, setContentMode] = useState<'short' | 'long'>('short');
   const [diagramModalOpen, setDiagramModalOpen] = useState(false);
 
@@ -93,7 +105,7 @@ export default function PaperSection({ section, index }: PaperSectionProps) {
   // Check if this section has meaningful content for short/long toggle
   // Skip toggle for very short sections like References, Acknowledgments
   const hasSubstantialContent = section.simplifiedContent.length > 200 &&
-                                 !section.title.toLowerCase().includes('reference') &&
+                                 !isReferencesSection &&
                                  !section.title.toLowerCase().includes('acknowledgment');
 
   const sectionNumber = String(index + 1).padStart(2, '0');
@@ -105,7 +117,7 @@ export default function PaperSection({ section, index }: PaperSectionProps) {
 
   return (
     <div
-      id={`section-${index}`}
+      id={isReferencesSection ? 'references' : `section-${index}`}
       className="section-anchor"
       style={{ marginBottom: '2rem' }}
     >
@@ -164,7 +176,8 @@ export default function PaperSection({ section, index }: PaperSectionProps) {
 
         {isExpanded && (
           <div style={{ animation: 'fadeIn 0.2s ease' }}>
-            {/* Toggle between simplified and original */}
+            {/* Toggle between simplified and original - hide for References */}
+            {!isReferencesSection && (
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -259,9 +272,10 @@ export default function PaperSection({ section, index }: PaperSectionProps) {
                 <span className="badge">Has Diagram</span>
               )}
             </div>
+            )}
 
-            {/* TL;DR for key sections */}
-            {!showOriginal && ['Method', 'Result', 'Discussion'].some(keyword => section.title.includes(keyword)) && (
+            {/* TL;DR for key sections - hide for References */}
+            {!isReferencesSection && !showOriginal && ['Method', 'Result', 'Discussion'].some(keyword => section.title.includes(keyword)) && (
               <div style={{
                 background: 'var(--color-bg-secondary)',
                 border: '1px solid var(--color-border)',
@@ -289,7 +303,11 @@ export default function PaperSection({ section, index }: PaperSectionProps) {
             <div style={{ marginBottom: section.diagram ? '1.5rem' : 0 }}>
               {showOriginal ? (
                 <div className="original-content">
-                  {section.originalContent}
+                  {isReferencesSection ? (
+                    <div dangerouslySetInnerHTML={{ __html: addReferenceAnchors(section.originalContent.replace(/\n/g, '<br/>')) }} />
+                  ) : (
+                    section.originalContent
+                  )}
                 </div>
               ) : contentMode === 'short' && hasSubstantialContent ? (
                 <div className="short-summary">
@@ -302,7 +320,7 @@ export default function PaperSection({ section, index }: PaperSectionProps) {
                   </button>
                 </div>
               ) : (
-                <MarkdownContent content={section.simplifiedContent} />
+                <MarkdownContent content={isReferencesSection ? addReferenceAnchors(section.simplifiedContent) : section.simplifiedContent} />
               )}
             </div>
 

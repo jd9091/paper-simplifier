@@ -44,10 +44,24 @@ export default function DiagramModal({ chart, isOpen, onClose }: DiagramModalPro
       try {
         const mermaid = (await import('mermaid')).default;
 
+        // Detect current theme from CSS variable
+        const isDark = getComputedStyle(document.documentElement)
+          .getPropertyValue('--color-bg')
+          .trim() === '#0a0a0a';
+
         mermaid.initialize({
           startOnLoad: false,
           theme: 'base',
-          themeVariables: {
+          themeVariables: isDark ? {
+            primaryColor: '#141414',
+            primaryTextColor: '#fafafa',
+            primaryBorderColor: '#fafafa',
+            lineColor: '#a3a3a3',
+            secondaryColor: '#1a1a1a',
+            tertiaryColor: '#0a0a0a',
+            fontSize: '16px',
+            fontFamily: 'JetBrains Mono, monospace',
+          } : {
             primaryColor: '#fafafa',
             primaryTextColor: '#1a1a1a',
             primaryBorderColor: '#1a1a1a',

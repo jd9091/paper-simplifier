@@ -1,41 +1,32 @@
 import { UserLevel } from './types';
 
-export const SECTION_PARSER_PROMPT = `You are analyzing an academic paper. Your task is to identify and extract ALL sections of the paper comprehensively.
+export const SECTION_PARSER_PROMPT = `You are analyzing an academic paper. Identify ALL section boundaries.
 
-IMPORTANT: Do NOT truncate or summarize the content. Extract the FULL text of each section.
+Look for section headers:
+- Numbered: "1 Introduction", "2. Methods", "2.1 Data Collection"
+- Plain: "Abstract", "METHODS", "Results"
+- Roman numerals: "I. INTRODUCTION", "II. Methods", "III-A. Subsection", "IV RESULTS"
+- Letters: "A. Background", "B. Related Work"
 
-Identify these standard sections if they exist:
-- Abstract
-- Introduction
-- Background / Literature Review
-- Methods / Methodology
-- Results / Findings
-- Discussion
-- Conclusion
-- Acknowledgments
-- References (you can summarize this as "[References section with N citations]")
+For each section, find:
+1. The exact title as it appears (including numbers)
+2. A unique phrase (5-10 words) from the FIRST sentence of that section
 
-For each section, provide:
-1. The section title (use the actual title from the paper)
-2. The COMPLETE text content of that section - do not truncate or summarize
-
-Return ONLY a valid JSON object with no additional text, explanations, or commentary:
+Return ONLY this JSON:
 {
   "sections": [
-    {
-      "title": "Section Name",
-      "content": "Full section text without any truncation..."
-    }
+    {"title": "Abstract", "startPhrase": "Foundation models now powering most"},
+    {"title": "1 Introduction", "startPhrase": "The dominant sequence modeling architectures"},
+    {"title": "2 Methods", "startPhrase": "We propose a new approach"}
   ]
 }
 
-CRITICAL:
-- Extract ALL content from each section
-- Do NOT add "..." or "[truncated]"
-- Do NOT summarize - include the complete text
-- If a section is long, include it all
-- Preserve important figures, tables, and equations descriptions
-- Return ONLY the JSON object - no text before or after it`;
+RULES:
+- List sections in order they appear
+- startPhrase must be unique words from the section's first sentence
+- Include Abstract, Introduction, Methods, Results, Discussion, Conclusion, References
+- Include numbered subsections (1.1, 2.1) if they have distinct titles
+- Do NOT include page numbers, figure captions, or table headers`;
 
 export const getSimplificationPrompt = (level: UserLevel): string => {
   const levelInstructions: Record<UserLevel, string> = {
@@ -130,7 +121,6 @@ Choose the most appropriate diagram type:
 - flowchart TD (top-down) for processes, methodologies, workflows
 - flowchart LR (left-right) for timelines, progressions
 - graph TD for relationships, hierarchies
-- pie for proportions (if relevant data exists)
 
 Requirements:
 1. Use clear, concise labels (max 5-6 words per node)
@@ -138,6 +128,17 @@ Requirements:
 3. Show meaningful relationships with arrows
 4. Use subgraphs to group related concepts if helpful
 5. Make it self-explanatory even without reading the text
+
+CRITICAL SYNTAX RULES:
+- Node IDs must be simple letters/numbers: A, B, C1, Node1 (NOT "JNote" or complex names)
+- Node labels go in brackets: A[Label Text]
+- Arrow labels go in pipes: A -->|label text| B
+- NEVER put text directly after node ID without brackets or pipes
+- Each connection must be on its own line
+- Valid: A[Start] --> B[Process]
+- Valid: A -->|sends to| B
+- INVALID: A --> BNote: something (this will cause parsing errors)
+- INVALID: A --> B: something (missing pipes around label)
 
 Return ONLY valid Mermaid code starting with the diagram type (e.g., "flowchart TD" or "graph TD").
 If this section doesn't lend itself to visualization (e.g., abstract only, or no clear relationships), return exactly: SKIP
@@ -257,6 +258,13 @@ Requirements:
 4. Highlight significant findings
 5. Make the logic flow obvious
 
+CRITICAL SYNTAX RULES:
+- Node IDs must be simple: A, B, C1, R1 (NOT "ResultNode" or complex names)
+- Node labels in brackets: A[Label Text]
+- Arrow labels in pipes: A -->|label| B
+- NEVER: A --> BText: something (causes parsing errors)
+- Each connection on its own line
+
 Return ONLY valid Mermaid code starting with "flowchart TD" or "flowchart LR".
 If results cannot be visualized meaningfully, return: SKIP`;
   }
@@ -277,6 +285,13 @@ Requirements:
 3. Show decision points if applicable
 4. Use 6-12 nodes
 5. Label arrows with actions or transitions
+
+CRITICAL SYNTAX RULES:
+- Node IDs must be simple: A, B, M1, S1 (NOT "MethodNode")
+- Node labels in brackets: A[Label Text]
+- Arrow labels in pipes: A -->|action| B
+- NEVER: A --> BNote: text (causes errors)
+- Each connection on its own line
 
 Return ONLY valid Mermaid code starting with "flowchart TD".
 If methodology cannot be visualized, return: SKIP`;

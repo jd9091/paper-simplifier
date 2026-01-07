@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { PaperMetadata } from './types';
+import { extractTextFromPDF } from './pdf-processor';
 
 export type PaperSource = 'arxiv' | 'pubmed' | 'doi' | 'generic';
 
@@ -13,14 +14,14 @@ export function detectSource(url: string): PaperSource {
 
 export async function fetchArxivPaper(url: string): Promise<{ text: string; metadata: PaperMetadata }> {
   try {
-    // Extract arXiv ID
-    const arxivId = url.match(/(\d{4}\.\d{4,5})/)?.[1];
+    // Extract arXiv ID (handles both old and new formats)
+    const arxivId = url.match(/(\d{4}\.\d{4,5})/)?.[1] || url.match(/abs\/([a-z-]+\/\d+)/)?.[1];
     if (!arxivId) throw new Error('Invalid arXiv URL');
 
-    // Fetch abstract page
+    // Fetch abstract page for metadata
     const absUrl = `https://arxiv.org/abs/${arxivId}`;
-    const response = await axios.get(absUrl);
-    const $ = cheerio.load(response.data);
+    const absResponse = await axios.get(absUrl);
+    const $ = cheerio.load(absResponse.data);
 
     const title = $('.title').text().replace('Title:', '').trim();
     const authors = $('.authors a')
@@ -28,8 +29,6 @@ export async function fetchArxivPaper(url: string): Promise<{ text: string; meta
       .get();
     const abstract = $('.abstract').text().replace('Abstract:', '').trim();
 
-    // Note: We can't get full text directly from arXiv HTML
-    // We would need to download the PDF or source files
     const metadata: PaperMetadata = {
       title,
       authors,
@@ -37,10 +36,27 @@ export async function fetchArxivPaper(url: string): Promise<{ text: string; meta
       url: absUrl,
     };
 
-    // For now, return abstract as the text
-    // In production, you'd want to download the PDF
+    // Download the actual PDF
+    const pdfUrl = `https://arxiv.org/pdf/${arxivId}.pdf`;
+    console.log(`[arXiv] Downloading PDF from: ${pdfUrl}`);
+
+    const pdfResponse = await axios.get(pdfUrl, {
+      responseType: 'arraybuffer',
+      timeout: 60000, // 60 second timeout for large PDFs
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; PaperSimplifier/1.0)',
+      },
+    });
+
+    // Convert to Buffer and extract text
+    const pdfBuffer = Buffer.from(pdfResponse.data);
+    console.log(`[arXiv] Downloaded PDF: ${pdfBuffer.length} bytes`);
+
+    const { text: pdfText } = await extractTextFromPDF(pdfBuffer);
+    console.log(`[arXiv] Extracted ${pdfText.length} chars from PDF`);
+
     return {
-      text: `Title: ${title}\n\nAuthors: ${authors.join(', ')}\n\nAbstract: ${abstract}`,
+      text: pdfText,
       metadata,
     };
   } catch (error) {

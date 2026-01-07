@@ -463,6 +463,45 @@
   opacity: 0.7;
 }
 
+/* Citation links - clickable references like [37] */
+.citation-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px dotted var(--color-accent);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  padding: 0 0.125rem;
+}
+
+.citation-link:hover {
+  color: var(--color-fg);
+  border-bottom-color: var(--color-fg);
+  background-color: var(--color-hover);
+  text-decoration: none;
+}
+
+/* Reference anchors - invisible targets for citation links */
+.reference-anchor {
+  scroll-margin-top: 100px;
+  display: inline-block;
+}
+
+/* Highlight the reference briefly when navigating to it */
+.reference-anchor:target + *,
+.reference-anchor:target {
+  animation: highlight-ref 2s ease-out;
+}
+
+@keyframes highlight-ref {
+  0% {
+    background-color: rgba(102, 102, 102, 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 /* Emphasis */
 .markdown-bold {
   font-weight: 600;

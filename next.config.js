@@ -5,11 +5,7 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
   },
-  turbopack: {}, // Empty turbopack config to silence warning
-  webpack: (config) => {
-    config.resolve.alias.canvas = false;
-    return config;
-  },
+  turbopack: {},
 };
 
 export default nextConfig;

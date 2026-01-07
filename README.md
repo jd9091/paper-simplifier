@@ -180,16 +180,7 @@ Modify the grayscale theme in `tailwind.config.ts` and `app/globals.css`.
 
 ## Deployment
 
-### Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Import project in Vercel
-3. Add environment variables:
-   - `ANTHROPIC_API_KEY`
-   - `NEXT_PUBLIC_APP_URL` (your production URL)
-4. Deploy
-
-### Other Platforms
+For deployment instructions, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 Build for production:
 ```bash
@@ -213,6 +204,11 @@ npm run start
 - ✅ Font size controls
 - ✅ Improved markdown rendering
 - ✅ Key findings extraction
+- ✅ Clickable citation links (click [37] to jump to References)
+- ✅ Enhanced PDF text extraction (fixed word spacing issues)
+- ✅ Improved section detection (detects numbered sections: 1., 2., I, II, etc.)
+- ✅ Full reference list extraction (no more summaries)
+- ✅ Accurate progress bar with realistic time estimates (2-5 min)
 
 ## Future Enhancements
 

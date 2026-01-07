@@ -8,7 +8,18 @@ interface MarkdownContentProps {
   content: string;
 }
 
+// Convert citation numbers like [37] into clickable links to specific references
+function convertCitationsToLinks(content: string): string {
+  // Match [number] pattern but not if it's part of a markdown link ]( or image ![
+  // This regex finds [digits] not followed by ( and not preceded by !
+  // Link directly to the specific reference anchor (e.g., #ref-37)
+  return content.replace(/(?<!!)\[(\d+)\](?!\()/g, '<a href="#ref-$1" class="citation-link">[$1]</a>');
+}
+
 export default function MarkdownContent({ content }: MarkdownContentProps) {
+  // Process citations before rendering
+  const processedContent = convertCitationsToLinks(content);
+
   return (
     <div className="markdown-content">
       <ReactMarkdown
@@ -26,17 +37,28 @@ export default function MarkdownContent({ content }: MarkdownContentProps) {
           ul: ({ children }) => <ul className="markdown-list">{children}</ul>,
           ol: ({ children }) => <ol className="markdown-list-ordered">{children}</ol>,
           // Links
-          a: ({ href, children }: any) => (
-            <a href={href} target="_blank" rel="noopener noreferrer" className="markdown-link">
-              {children}
-            </a>
-          ),
+          a: ({ href, children, className }: any) => {
+            // Citation links are internal, don't open in new tab
+            if (className === 'citation-link') {
+              return (
+                <a href={href} className={className}>
+                  {children}
+                </a>
+              );
+            }
+            // External links open in new tab
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="markdown-link">
+                {children}
+              </a>
+            );
+          },
           // Emphasis
           strong: ({ children }) => <strong className="markdown-bold">{children}</strong>,
           em: ({ children }) => <em className="markdown-italic">{children}</em>,
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

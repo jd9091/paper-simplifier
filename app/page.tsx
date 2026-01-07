@@ -10,6 +10,64 @@ import { UserLevel } from '@/lib/types';
 
 type InputMode = 'upload' | 'url';
 
+// Helper to process with SSE streaming
+async function processWithStream(
+  text: string,
+  metadata: any,
+  userLevel: string,
+  onLog: (message: string, step?: number, totalSteps?: number) => void
+): Promise<string> {
+  const response = await fetch('/api/process', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, metadata, userLevel }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Processing failed: ${response.statusText}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error('No response stream available');
+  }
+
+  const decoder = new TextDecoder();
+  let resultId: string | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n');
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.slice(6));
+
+          if (data.type === 'progress') {
+            onLog(data.message, data.step, data.totalSteps);
+          } else if (data.type === 'complete') {
+            resultId = data.id;
+          } else if (data.type === 'error') {
+            throw new Error(data.error || 'Processing failed');
+          }
+        } catch (e) {
+          // Ignore parse errors for incomplete chunks
+        }
+      }
+    }
+  }
+
+  if (!resultId) {
+    throw new Error('No result ID received');
+  }
+
+  return resultId;
+}
+
 export default function Home() {
   const router = useRouter();
   const [inputMode, setInputMode] = useState<InputMode>('upload');
@@ -17,11 +75,19 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [processingStatus, setProcessingStatus] = useState('');
+  const [logs, setLogs] = useState<{ message: string; timestamp: Date }[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [totalSteps, setTotalSteps] = useState(5);
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
     setError(null);
+  };
+
+  const handleLog = (message: string, step?: number, total?: number) => {
+    setLogs(prev => [...prev, { message, timestamp: new Date() }]);
+    if (step !== undefined) setCurrentStep(step);
+    if (total !== undefined) setTotalSteps(total);
   };
 
   const handleUploadSubmit = async () => {
@@ -29,7 +95,9 @@ export default function Home() {
 
     setIsProcessing(true);
     setError(null);
-    setProcessingStatus('Uploading paper...');
+    setLogs([]);
+    setCurrentStep(0);
+    handleLog('Uploading paper...');
 
     try {
       const formData = new FormData();
@@ -56,35 +124,17 @@ export default function Home() {
         throw new Error(uploadData.error || 'Failed to upload file');
       }
 
-      setProcessingStatus('Analyzing sections and simplifying content...');
+      handleLog('PDF uploaded successfully, starting analysis...');
 
-      const processResponse = await fetch('/api/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: uploadData.text,
-          metadata: uploadData.metadata,
-          userLevel: selectedLevel,
-        }),
-      });
+      const resultId = await processWithStream(
+        uploadData.text,
+        uploadData.metadata,
+        selectedLevel,
+        handleLog
+      );
 
-      if (!processResponse.ok) {
-        const errorText = await processResponse.text();
-        throw new Error(`Processing failed: ${errorText}`);
-      }
-
-      let processData;
-      try {
-        processData = await processResponse.json();
-      } catch {
-        throw new Error('Server returned an invalid response during processing. Please try again.');
-      }
-
-      if (!processData.success) {
-        throw new Error(processData.error || 'Failed to process paper');
-      }
-
-      router.push(`/results/${processData.id}`);
+      handleLog('Complete! Redirecting to results...');
+      router.push(`/results/${resultId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setIsProcessing(false);
@@ -94,7 +144,9 @@ export default function Home() {
   const handleURLSubmit = async (url: string) => {
     setIsProcessing(true);
     setError(null);
-    setProcessingStatus('Fetching paper from URL...');
+    setLogs([]);
+    setCurrentStep(0);
+    handleLog('Fetching paper from URL...');
 
     try {
       const fetchResponse = await fetch('/api/fetch-url', {
@@ -119,35 +171,17 @@ export default function Home() {
         throw new Error(fetchData.error || 'Failed to fetch URL');
       }
 
-      setProcessingStatus('Analyzing sections and simplifying content...');
+      handleLog('Paper fetched successfully, starting analysis...');
 
-      const processResponse = await fetch('/api/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: fetchData.text,
-          metadata: fetchData.metadata,
-          userLevel: selectedLevel,
-        }),
-      });
+      const resultId = await processWithStream(
+        fetchData.text,
+        fetchData.metadata,
+        selectedLevel,
+        handleLog
+      );
 
-      if (!processResponse.ok) {
-        const errorText = await processResponse.text();
-        throw new Error(`Processing failed: ${errorText}`);
-      }
-
-      let processData;
-      try {
-        processData = await processResponse.json();
-      } catch {
-        throw new Error('Server returned an invalid response during processing.');
-      }
-
-      if (!processData.success) {
-        throw new Error(processData.error || 'Failed to process paper');
-      }
-
-      router.push(`/results/${processData.id}`);
+      handleLog('Complete! Redirecting to results...');
+      router.push(`/results/${resultId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setIsProcessing(false);
@@ -156,7 +190,12 @@ export default function Home() {
 
   return (
     <>
-      <ProcessingProgress show={isProcessing} />
+      <ProcessingProgress
+        show={isProcessing}
+        logs={logs}
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+      />
 
       <div style={{ maxWidth: '700px', margin: '0 auto' }}>
         {/* Level Selector */}
