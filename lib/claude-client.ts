@@ -166,7 +166,7 @@ function createFallbackSections(text: string): Array<{ title: string; content: s
   // Pattern 1: Arabic numeral sections like "1 Introduction", "2.1 Background", etc.
   // Must start with section number (1-9, not years like 2023)
   const arabicPattern = /(?:^|\n)(\d{1,2}(?:\.\d+)*\.?\s+[A-Z][a-zA-Z\s&/,\-:]+?)(?=\s+[A-Z][a-z]|\n|$)/gm;
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = arabicPattern.exec(text)) !== null) {
     const title = match[1].trim();
     const sectionNum = parseInt(title.match(/^\d+/)?.[0] || '0');
@@ -176,10 +176,10 @@ function createFallbackSections(text: string): Array<{ title: string; content: s
     // - Looks like a page header (number + paper title fragment)
     // - Section number > 20 (unlikely to have 20+ sections)
     if (title.length >= 8 &&
-        sectionNum > 0 && sectionNum <= 20 &&
-        !/^\d{4}\./.test(title) && // Skip years like "2023."
-        !/Pre-print|MAESTRO:/i.test(title) && // Skip page headers
-        !/^\d+\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(title)) {
+      sectionNum > 0 && sectionNum <= 20 &&
+      !/^\d{4}\./.test(title) && // Skip years like "2023."
+      !/Pre-print|MAESTRO:/i.test(title) && // Skip page headers
+      !/^\d+\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(title)) {
       allMatches.push({ index: match.index, title, length: match[0].length });
     }
   }
@@ -195,9 +195,9 @@ function createFallbackSections(text: string): Array<{ title: string; content: s
       // Simple Roman numeral validation - must be valid and not too long
       if (/^(X{0,2})(IX|IV|V?I{0,3})$/.test(roman) && title.length >= 5) {
         // Check if this position already has a match (avoid duplicates)
-        const exists = allMatches.some(m => Math.abs(m.index - match.index) < 5);
+        const exists = allMatches.some(m => Math.abs(m.index - match!.index) < 5);
         if (!exists) {
-          allMatches.push({ index: match.index, title, length: match[0].length });
+          allMatches.push({ index: match!.index, title, length: match![0].length });
         }
       }
     }
@@ -308,8 +308,8 @@ export async function generateDiagram(
     // Validate it's actually Mermaid code, not explanatory text
     // Must START with graph/flowchart/pie (not just contain those words)
     const isValidMermaid = diagram.startsWith('graph ') ||
-                          diagram.startsWith('flowchart ') ||
-                          diagram.startsWith('pie ');
+      diagram.startsWith('flowchart ') ||
+      diagram.startsWith('pie ');
 
     if (diagram === 'SKIP' || diagram.includes('SKIP') || !isValidMermaid) {
       return null;
@@ -352,7 +352,7 @@ export async function processPaper(
   existingMetadata?: PaperMetadata,
   onProgress?: ProgressCallback
 ): Promise<{ metadata: PaperMetadata; sections: PaperSection[]; keyFindings?: KeyFindings }> {
-  const log = onProgress || (() => {});
+  const log = onProgress || (() => { });
 
   // Extract metadata and key findings in parallel
   log('Extracting paper metadata...', 1, 5);
